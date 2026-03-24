@@ -22,6 +22,12 @@ PROMPT="${PROMPT:-A person sits cross-legged by a campfire in a forested area.}"
 
 set -e
 
+# Verifica ffmpeg (necessario per il merge audio/video finale)
+if ! command -v ffmpeg &>/dev/null; then
+    echo "ERRORE: ffmpeg non trovato. Installa con: apt-get install -y ffmpeg"
+    exit 1
+fi
+
 export PYTHONPATH=./
 export MODEL_BASE=./weights
 export DISABLE_SP=1

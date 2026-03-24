@@ -61,6 +61,12 @@ source .venv/bin/activate
 
 pip install --upgrade pip setuptools -q
 
+# Installa ffmpeg di sistema (necessario per il merge audio/video finale)
+if ! command -v ffmpeg &>/dev/null; then
+    echo "    Installing system ffmpeg..."
+    apt-get install -y ffmpeg -q
+fi
+
 if python -c "import torch" 2>/dev/null; then
     echo "    PyTorch già disponibile: $(python -c 'import torch; print(torch.__version__)')"
 else

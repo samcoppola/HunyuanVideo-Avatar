@@ -27,6 +27,12 @@ PROMPT="${PROMPT:-a person sitting by a campfire in a forest}"
 
 set -e
 
+# Verifica ffmpeg (necessario per il merge audio/video finale)
+if ! command -v ffmpeg &>/dev/null; then
+    echo "ERRORE: ffmpeg non trovato. Installa con: apt-get install -y ffmpeg"
+    exit 1
+fi
+
 if [ -z "$ANTHROPIC_API_KEY" ]; then
     echo "Errore: ANTHROPIC_API_KEY non impostata."
     echo "  export ANTHROPIC_API_KEY=\"sk-ant-...\""
