@@ -52,13 +52,18 @@ cd "$REPO_DIR"
 echo ""
 echo "[2/4] Setting up Python virtual environment..."
 
-if ! command -v python3.10 &>/dev/null; then
+# Usa il Python che ha già PyTorch (tipicamente il default su RunPod)
+# Se il default non ha torch, fallback su python3.10
+if python3 -c "import torch" 2>/dev/null; then
+    PYTHON=python3
+    echo "    Usando $(python3 --version) con PyTorch $(python3 -c 'import torch; print(torch.__version__)')"
+elif command -v python3.10 &>/dev/null; then
+    PYTHON=python3.10
+else
     apt-get install -y python3.10 python3.10-venv
+    PYTHON=python3.10
 fi
 
-PYTHON=python3.10
-
-# --system-site-packages eredita PyTorch già installato sul template RunPod
 # Ricrea il venv se esiste senza system-site-packages
 if [ -d ".venv" ] && ! grep -q "include-system-site-packages = true" .venv/pyvenv.cfg 2>/dev/null; then
     echo "    Ricreazione venv con system-site-packages..."
@@ -73,8 +78,8 @@ source .venv/bin/activate
 pip install --upgrade pip -q
 pip install --upgrade setuptools -q
 
-# Salta PyTorch se già disponibile (template RunPod lo ha pre-installato)
-if python -c "import torch; print(torch.__version__)" 2>/dev/null | grep -q "^2"; then
+# Salta PyTorch se già disponibile tramite system-site-packages
+if python -c "import torch" 2>/dev/null; then
     echo "    PyTorch già disponibile: $(python -c 'import torch; print(torch.__version__)')"
 else
     echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
