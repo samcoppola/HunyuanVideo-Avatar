@@ -59,6 +59,11 @@ fi
 PYTHON=python3.10
 
 # --system-site-packages eredita PyTorch già installato sul template RunPod
+# Ricrea il venv se esiste senza system-site-packages
+if [ -d ".venv" ] && ! grep -q "include-system-site-packages = true" .venv/pyvenv.cfg 2>/dev/null; then
+    echo "    Ricreazione venv con system-site-packages..."
+    rm -rf .venv
+fi
 if [ ! -d ".venv" ]; then
     $PYTHON -m venv .venv --system-site-packages
 fi
