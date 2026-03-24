@@ -8,23 +8,20 @@
 #   MULTI_GPU=1 bash setup_runpod.sh    # multi-GPU / full-precision (8× GPU)
 #
 # What it does:
-#   1. Clones the repo
-#   2. Creates a Python venv, installs PyTorch 2.4.0 + dependencies + flash-attn
-#   3. Downloads model weights from HuggingFace
+#   1. Clona la repo
+#   2. Crea un venv Python 3.11, installa PyTorch 2.4.0 + dipendenze
+#   3. Scarica i pesi da HuggingFace
 #
 # Requirements:
-#   - Network Volume mounted at /workspace
-#   - HuggingFace token in HF_TOKEN env var (optional — models are public)
-#     export HF_TOKEN="hf_..."
+#   - Network Volume montato su /workspace
 # =============================================================================
 
-set -e  # Exit on error
+set -e
 
 WORKSPACE="/workspace"
 REPO_DIR="$WORKSPACE/HunyuanVideo-Avatar"
 WEIGHTS_DIR="$REPO_DIR/weights"
-HF_REPO="tencent/HunyuanVideo-Avatar"
-MULTI_GPU="${MULTI_GPU:-0}"   # 0 = single-GPU (FP8), 1 = multi-GPU (full precision)
+MULTI_GPU="${MULTI_GPU:-0}"
 
 echo "============================================================"
 echo " HunyuanVideo-Avatar — RunPod Setup"
@@ -48,67 +45,46 @@ fi
 
 cd "$REPO_DIR"
 
-# ── 2. Create venv and install dependencies ───────────────────────
+# ── 2. Crea venv e installa dipendenze ───────────────────────────
 echo ""
 echo "[2/4] Setting up Python virtual environment..."
 
-# Usa il Python che ha già PyTorch (tipicamente il default su RunPod)
-# Se il default non ha torch, fallback su python3.10
-if python3 -c "import torch" 2>/dev/null; then
-    PYTHON=python3
-    echo "    Usando $(python3 --version) con PyTorch $(python3 -c 'import torch; print(torch.__version__)')"
-elif command -v python3.10 &>/dev/null; then
-    PYTHON=python3.10
-else
-    apt-get install -y python3.10 python3.10-venv
-    PYTHON=python3.10
+if ! command -v python3.11 &>/dev/null; then
+    apt-get install -y python3.11 python3.11-venv
 fi
 
-# Ricrea il venv se esiste senza system-site-packages
-if [ -d ".venv" ] && ! grep -q "include-system-site-packages = true" .venv/pyvenv.cfg 2>/dev/null; then
-    echo "    Ricreazione venv con system-site-packages..."
-    rm -rf .venv
-fi
 if [ ! -d ".venv" ]; then
-    $PYTHON -m venv .venv --system-site-packages
+    python3.11 -m venv .venv
 fi
 
 source .venv/bin/activate
 
-pip install --upgrade pip -q
-pip install --upgrade setuptools -q
+pip install --upgrade pip setuptools -q
 
-# Salta PyTorch se già disponibile tramite system-site-packages
-if python -c "import torch" 2>/dev/null; then
-    echo "    PyTorch già disponibile: $(python -c 'import torch; print(torch.__version__)')"
-else
-    echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
-    pip install \
-        torch==2.4.0 \
-        torchvision==0.19.0 \
-        torchaudio==2.4.0 \
-        --index-url https://download.pytorch.org/whl/cu124 \
-        -q
-fi
+echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
+pip install \
+    torch==2.4.0 \
+    torchvision==0.19.0 \
+    torchaudio==2.4.0 \
+    --index-url https://download.pytorch.org/whl/cu124 \
+    -q
 
 pip install -r requirements.txt
 
-# flash-attention: try a pre-built wheel first to avoid the ~30-min compile
-echo "    Installing flash-attention v2.6.3..."
+echo "    Installing flash-attention..."
 pip install ninja -q
 pip install flash-attn==2.6.3 --no-build-isolation || \
     pip install git+https://github.com/Dao-AILab/flash-attention.git@v2.6.3
 
-echo "    Dependencies installed."
+echo "    Dipendenze installate."
 
-# ── 3. Download model weights ─────────────────────────────────────
+# ── 3. Scarica i pesi ─────────────────────────────────────────────
 echo ""
 if [ "$MULTI_GPU" = "1" ]; then
-    echo "[3/4] Downloading model weights (full-precision, ~30 GB)..."
+    echo "[3/4] Downloading model weights (full-precision, ~40 GB)..."
 else
-    echo "[3/4] Downloading model weights (FP8, ~20 GB)..."
+    echo "[3/4] Downloading model weights (FP8, ~30 GB)..."
 fi
-echo "      This will take several minutes depending on your connection."
 
 mkdir -p "$WEIGHTS_DIR"
 
@@ -117,42 +93,36 @@ export WEIGHTS_DIR MULTI_GPU
 import os
 from huggingface_hub import snapshot_download
 
-repo_id  = "tencent/HunyuanVideo-Avatar"
 local_dir = os.environ.get("WEIGHTS_DIR", "/workspace/HunyuanVideo-Avatar/weights")
-token     = os.environ.get("HF_TOKEN", None)
 multi_gpu = os.environ.get("MULTI_GPU", "0") == "1"
 
 if multi_gpu:
-    # Multi-GPU: full-precision transformer; skip FP8 files
     ignore_patterns = [
         "ckpts/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states_fp8.pt",
         "ckpts/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states_fp8_map.pt",
     ]
-    print("Included: full-precision transformer, vae, llava, text_encoder_2, whisper-tiny, det_align")
-    print("Skipped:  FP8 variants")
+    print("Incluso:  full-precision transformer, vae, llava, text_encoder_2, whisper-tiny, det_align")
+    print("Saltato:  varianti FP8")
 else:
-    # Single GPU: FP8 transformer; skip the large full-precision file
     ignore_patterns = [
         "ckpts/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt",
     ]
-    print("Included: FP8 transformer (+map), vae, llava, text_encoder_2, whisper-tiny, det_align")
-    print("Skipped:  full-precision transformer (mp_rank_00_model_states.pt)")
+    print("Incluso:  FP8 transformer, vae, llava, text_encoder_2, whisper-tiny, det_align")
+    print("Saltato:  full-precision transformer")
 
-print(f"Downloading to: {local_dir}")
+print(f"Destinazione: {local_dir}")
 print()
 
 snapshot_download(
-    repo_id=repo_id,
+    repo_id="tencent/HunyuanVideo-Avatar",
     local_dir=local_dir,
     ignore_patterns=ignore_patterns,
-    token=token,
     local_dir_use_symlinks=False,
 )
-
-print("Download complete!")
+print("Download completo!")
 PYEOF
 
-# ── 4. Verify structure ───────────────────────────────────────────
+# ── 4. Verifica struttura ─────────────────────────────────────────
 echo ""
 echo "[4/4] Verifying checkpoint structure..."
 
@@ -170,7 +140,6 @@ required = [
     "whisper-tiny",
     "det_align",
 ]
-
 if multi_gpu:
     required.append("hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt")
 else:
@@ -200,18 +169,12 @@ echo ""
 echo "Next steps:"
 echo ""
 if [ "$MULTI_GPU" = "1" ]; then
-    echo "  Run multi-GPU inference (8 GPUs):"
-    echo "    cd $REPO_DIR && bash scripts/run_sample_batch_sp.sh"
-    echo ""
-    echo "  Run Gradio web UI (8 GPUs):"
-    echo "    cd $REPO_DIR && bash scripts/run_gradio.sh"
+    echo "  Multi-GPU inference:  bash scripts/run_sample_batch_sp.sh"
+    echo "  Gradio UI:            bash scripts/run_gradio.sh"
 else
-    echo "  Run single-GPU inference (with CPU offload):"
-    echo "    cd $REPO_DIR && bash scripts/run_single_poor.sh"
-    echo ""
-    echo "  To switch to multi-GPU mode (downloads full-precision model):"
-    echo "    MULTI_GPU=1 bash $REPO_DIR/setup_runpod.sh"
+    echo "  Single-GPU inference: bash scripts/run_single_poor.sh"
+    echo "  Test rapido:          bash test_avatar.sh"
 fi
 echo ""
-echo "  Output videos: $REPO_DIR/results-poor/  (or results-single/)"
+echo "  Output: $REPO_DIR/results-poor/"
 echo "============================================================"
