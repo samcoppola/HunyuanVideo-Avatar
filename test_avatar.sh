@@ -63,7 +63,7 @@ CUDA_VISIBLE_DEVICES=0 python3 hymm_sp/sample_gpu_poor.py \
     --ckpt "$CHECKPOINT" \
     --sample-n-frames 129 \
     --seed 128 \
-    --image-size 704 \
+    --image-size ${IMAGE_SIZE:-512} \
     --cfg-scale 7.5 \
     --infer-steps 50 \
     --use-deepcache 1 \
