@@ -47,6 +47,17 @@ echo ""
 
 mkdir -p "$OUTPUT_DIR"
 
+# Prova prima senza cpu-offload (più veloce se la VRAM regge)
+# Se vai OOM, rilancia con: CPU_OFFLOAD=1 bash test_avatar.sh
+if [ "${CPU_OFFLOAD:-0}" = "1" ]; then
+    OFFLOAD_FLAGS="--cpu-offload"
+    export CPU_OFFLOAD=1
+    echo "  Modalità: CPU offload (lento ma bassa VRAM)"
+else
+    OFFLOAD_FLAGS=""
+    echo "  Modalità: GPU diretta (veloce, richiede ~24GB VRAM)"
+fi
+
 CUDA_VISIBLE_DEVICES=0 python3 hymm_sp/sample_gpu_poor.py \
     --input "$TEMP_CSV" \
     --ckpt "$CHECKPOINT" \
@@ -59,7 +70,7 @@ CUDA_VISIBLE_DEVICES=0 python3 hymm_sp/sample_gpu_poor.py \
     --flow-shift-eval-video 5.0 \
     --save-path "$OUTPUT_DIR" \
     --use-fp8 \
-    --cpu-offload \
+    $OFFLOAD_FLAGS \
     --infer-min
 
 rm -f "$TEMP_CSV"
