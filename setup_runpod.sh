@@ -54,20 +54,24 @@ if ! command -v python3.11 &>/dev/null; then
 fi
 
 if [ ! -d ".venv" ]; then
-    python3.11 -m venv .venv
+    python3.11 -m venv .venv --system-site-packages
 fi
 
 source .venv/bin/activate
 
 pip install --upgrade pip setuptools -q
 
-echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
-pip install \
-    torch==2.4.0 \
-    torchvision==0.19.0 \
-    torchaudio==2.4.0 \
-    --index-url https://download.pytorch.org/whl/cu124 \
-    -q
+if python -c "import torch" 2>/dev/null; then
+    echo "    PyTorch già disponibile: $(python -c 'import torch; print(torch.__version__)')"
+else
+    echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
+    pip install \
+        torch==2.4.0 \
+        torchvision==0.19.0 \
+        torchaudio==2.4.0 \
+        --index-url https://download.pytorch.org/whl/cu124 \
+        -q
+fi
 
 pip install -r requirements.txt
 
