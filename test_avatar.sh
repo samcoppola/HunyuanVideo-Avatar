@@ -31,8 +31,8 @@ OUTPUT_DIR="./results-test"
 TEMP_CSV="/tmp/avatar_test_$$.csv"
 
 # Crea CSV temporaneo con il singolo input
-echo "videoid,image,audio,prompt,fps" > "$TEMP_CSV"
-echo "1,${IMAGE},${AUDIO},${PROMPT},25"  >> "$TEMP_CSV"
+printf 'videoid,image,audio,prompt,fps\n' > "$TEMP_CSV"
+printf '1,%s,%s,"%s",25\n' "${IMAGE}" "${AUDIO}" "${PROMPT}" >> "$TEMP_CSV"
 
 echo "============================================================"
 echo " HunyuanVideo-Avatar — Test"

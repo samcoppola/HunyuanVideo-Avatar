@@ -127,8 +127,8 @@ echo "  Prompt riscritto: $REWRITTEN_PROMPT"
 echo ""
 
 # Crea CSV temporaneo con il prompt riscritto
-echo "videoid,image,audio,prompt,fps" > "$TEMP_CSV"
-echo "1,${IMAGE},${AUDIO},${REWRITTEN_PROMPT},25" >> "$TEMP_CSV"
+printf 'videoid,image,audio,prompt,fps\n' > "$TEMP_CSV"
+printf '1,%s,%s,"%s",25\n' "${IMAGE}" "${AUDIO}" "${REWRITTEN_PROMPT}" >> "$TEMP_CSV"
 
 echo "  Output: $OUTPUT_DIR/1_audio.mp4"
 echo "============================================================"
