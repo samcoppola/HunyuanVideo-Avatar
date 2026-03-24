@@ -58,23 +58,28 @@ fi
 
 PYTHON=python3.10
 
+# --system-site-packages eredita PyTorch già installato sul template RunPod
 if [ ! -d ".venv" ]; then
-    $PYTHON -m venv .venv
+    $PYTHON -m venv .venv --system-site-packages
 fi
 
 source .venv/bin/activate
 
 pip install --upgrade pip -q
-pip install --upgrade setuptools -q   # fix pkg_resources on newer Python
+pip install --upgrade setuptools -q
 
-# Install PyTorch 2.4.0 explicitly before requirements.txt (Avatar needs it pinned)
-echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
-pip install \
-    torch==2.4.0 \
-    torchvision==0.19.0 \
-    torchaudio==2.4.0 \
-    --index-url https://download.pytorch.org/whl/cu124 \
-    -q
+# Salta PyTorch se già disponibile (template RunPod lo ha pre-installato)
+if python -c "import torch; print(torch.__version__)" 2>/dev/null | grep -q "^2"; then
+    echo "    PyTorch già disponibile: $(python -c 'import torch; print(torch.__version__)')"
+else
+    echo "    Installing PyTorch 2.4.0 (CUDA 12.4)..."
+    pip install \
+        torch==2.4.0 \
+        torchvision==0.19.0 \
+        torchaudio==2.4.0 \
+        --index-url https://download.pytorch.org/whl/cu124 \
+        -q
+fi
 
 pip install -r requirements.txt
 
