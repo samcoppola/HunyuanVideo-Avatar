@@ -22,11 +22,15 @@ else
 fi
 echo "============================================================"
 
-pip install huggingface_hub -q
+# Usa il Python più recente disponibile
+PYTHON=$(command -v python3.13 || command -v python3.11 || command -v python3.10 || command -v python3)
+echo "Python: $($PYTHON --version)"
+
+$PYTHON -m pip install huggingface_hub -q
 mkdir -p "$WEIGHTS_DIR"
 
 export WEIGHTS_DIR MULTI_GPU
-python3 - <<'PYEOF'
+$PYTHON - <<'PYEOF'
 import os
 from huggingface_hub import snapshot_download
 
